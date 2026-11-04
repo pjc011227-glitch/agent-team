@@ -16,7 +16,7 @@
     <section class="remote-panel" id="task-panel" hidden>
       <div class="row-heading"><h2>发送任务</h2><span id="selected-name"></span></div>
       <div class="remote-form-grid">
-        <label>动作<select id="action"><option value="notify">发送任务通知（不会自动运行）</option><option value="system_info">查询电脑系统信息</option><option value="list_files">列出授权工作目录</option><option value="write_note">在授权工作目录保存便签（电脑端需允许写入）</option></select></label>
+        <label>动作<select id="action"><option value="notify">发送任务通知（不会自动运行）</option><option value="system_info">查询电脑系统信息</option><option value="list_files">列出授权工作目录</option><option value="read_text">读取授权目录内文本文件（最多 12KB）</option><option value="write_note">在授权工作目录保存便签（电脑端需允许写入）</option></select></label>
         <label id="payload-label">任务内容<textarea id="payload" rows="4" maxlength="8000" placeholder="例如：请在电脑上处理项目报告"></textarea></label>
       </div>
       <button id="send-task" class="primary-button">发送到电脑</button>

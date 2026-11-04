@@ -39,8 +39,20 @@ def workspace_path(workspace: Path, rel: str = ".") -> Path:
     if any(part.startswith(".") and part != "." for part in relative.parts) or ".." in relative.parts:
         raise WorkerError("不可访问隐藏目录或工作目录外的文件")
     root = workspace.resolve(strict=True)
-    result = (root / relative).resolve(strict=True)
-    if not result.is_relative_to(root):
+    # Disallow symlinks/junctions at *any* component, even when the target stays
+    # inside the workspace (e.g. alias -> hidden/secrets).
+    cursor = root
+    for component in relative.parts:
+        if component == ".":
+            continue
+        cursor = cursor / component
+        if cursor.is_symlink() or (hasattr(cursor, "is_junction") and cursor.is_junction()):
+            raise WorkerError("工作目录内不允许通过软链接或联接点读取文件")
+    try:
+        result = (root / relative).resolve(strict=True)
+    except FileNotFoundError as exc:
+        raise WorkerError("请求的文件或目录不存在") from exc
+    if not result.is_relative_to(root) or any(part.startswith(".") for part in result.relative_to(root).parts):
         raise WorkerError("目标超出授权工作目录")
     return result
 
@@ -68,6 +80,18 @@ def execute(action: str, payload: dict, workspace: Path | None = None,
                        key=lambda p: p.name.lower())[:80]
         return json.dumps([{"name": p.name, "type": "directory" if p.is_dir() else "file"}
                            for p in items], ensure_ascii=False)
+    if action == "read_text":
+        target = workspace_path(workspace, payload.get("path", ""))
+        if not target.is_file():
+            raise WorkerError("目标不是普通文件")
+        if target.suffix.lower() not in {".txt", ".md", ".csv", ".json", ".py", ".log", ".yaml", ".yml", ".toml"}:
+            raise WorkerError("只允许读取常用的纯文本文件类型")
+        if target.stat().st_size > 12000:
+            raise WorkerError("文件超过 12KB，请缩小范围后再读取")
+        try:
+            return target.read_text(encoding="utf-8")
+        except UnicodeError as exc:
+            raise WorkerError("文件不是有效的 UTF-8 文本") from exc
     if action == "write_note":
         if not allow_write:
             raise WorkerError("电脑端未开启 --allow-write，拒绝写入")

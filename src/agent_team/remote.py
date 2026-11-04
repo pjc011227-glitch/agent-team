@@ -13,7 +13,7 @@ from typing import Any
 
 from .storage import Store, uid, utcnow
 
-ALLOWED_ACTIONS = frozenset({"system_info", "list_files", "notify", "write_note"})
+ALLOWED_ACTIONS = frozenset({"system_info", "list_files", "read_text", "notify", "write_note"})
 
 
 class RemoteError(ValueError):
@@ -111,7 +111,7 @@ def enqueue(store: Store, device_id: str, action: str, payload: dict[str, Any]) 
         text = payload.get("text", "")
         if not isinstance(text, str) or not (1 <= len(text) <= 8000):
             raise RemoteError("请输入不超过 8000 字的任务内容")
-    if action == "list_files" and not isinstance(payload.get("path", "."), str):
+    if action in {"list_files", "read_text"} and not isinstance(payload.get("path", "."), str):
         raise RemoteError("目录路径无效")
     task_id = uid()
     with store.connection() as db:

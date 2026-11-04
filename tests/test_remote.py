@@ -171,6 +171,33 @@ class RelayAPITests(unittest.TestCase):
 
 
 class DesktopWorkerTests(unittest.TestCase):
+    def test_read_text_only_in_workspace(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "report.md").write_text("项目进度：完成第一版", encoding="utf-8")
+            (root / "secret.bin").write_bytes(b"private")
+            (root / "too-big.txt").write_text("a" * 12001)
+            self.assertIn("项目进度", execute("read_text", {"path": "report.md"}, root))
+            for name in ["secret.bin", "too-big.txt", "missing.txt"]:
+                with self.subTest(name=name), self.assertRaises(WorkerError):
+                    execute("read_text", {"path": name}, root)
+            with self.assertRaises(WorkerError):
+                execute("read_text", {"path": "../report.md"}, root)
+
+    def test_symlink_inside_workspace_cannot_expose_hidden_target(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / ".secret.txt").write_text("password")
+            alias = root / "friendly.txt"
+            try:
+                alias.symlink_to(root / ".secret.txt")
+            except (OSError, NotImplementedError):
+                self.skipTest("符号链接创建被操作系统权限策略限制")
+            with self.assertRaises(WorkerError):
+                execute("read_text", {"path": "friendly.txt"}, root)
+            with self.assertRaises(WorkerError):
+                workspace_path(root, "friendly.txt")
+
     def test_validated_server_only_https(self):
         self.assertEqual(validate_server_url("https://relay.example.net"), "https://relay.example.net")
         self.assertEqual(validate_server_url("http://localhost:8765"), "http://localhost:8765")

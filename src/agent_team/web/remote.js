@@ -2,7 +2,7 @@
 const $ = (id) => document.getElementById(id);
 const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let selected = null, knownDevices = [], knownTasks = [], toastTimer;
-const descriptions = {notify:'发送工作通知',system_info:'查看电脑状态',list_files:'查看授权文件夹',write_note:'写入工作便签'};
+const descriptions = {notify:'发送工作通知',system_info:'查看电脑状态',list_files:'查看授权文件夹',read_text:'读取文本文件',write_note:'写入工作便签'};
 const statusName = {queued:'待领取',running:'执行中',completed:'已完成',failed:'执行失败',interrupted:'连接中断',cancelled:'已取消'};
 function taskRow(t){
   const state = t.status || 'unknown';
@@ -87,11 +87,11 @@ $('add-device').addEventListener('click',async()=>{
 });
 $('copy-secret').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('device-secret').value);toast('已复制设备密钥');}catch{ $('device-secret').select();toast('请长按复制密钥');}});
 $('close-dialog').addEventListener('click',()=>{$('pair-dialog').close();$('device-secret').value='';});
-$('action').addEventListener('change',()=>{const a=$('action').value;$('payload-label').hidden=a==='system_info';$('payload-label').firstChild.textContent=a==='list_files'?'子目录（相对工作目录）':'任务内容';$('payload').placeholder=a==='list_files'?'.':'发送到电脑的内容';});
+$('action').addEventListener('change',()=>{const a=$('action').value;$('payload-label').hidden=a==='system_info';$('payload-label').firstChild.textContent=['list_files','read_text'].includes(a)?(a==='read_text'?'文件路径（相对工作目录）':'子目录（相对工作目录）'):'任务内容';$('payload').placeholder=a==='list_files'?'.':a==='read_text'?'例如：README.md':'发送到电脑的内容';});
 $('send-task').addEventListener('click',async()=>{
   if(!selected)return;
   const action=$('action').value, text=$('payload').value.trim();
-  const payload=action==='system_info'?{}:action==='list_files'?{path:text||'.'}:{text};
+  const payload=action==='system_info'?{}:['list_files','read_text'].includes(action)?{path:text||(action==='list_files'?'.':'')}:{text};
   try{await api('/devices/'+encodeURIComponent(selected)+'/tasks','POST',{action,payload});toast('已加入队列，等待电脑领取');$('payload').value='';await refreshTasks();}
   catch(e){toast(e.message);}
 });
