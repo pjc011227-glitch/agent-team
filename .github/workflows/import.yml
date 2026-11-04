@@ -46,6 +46,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # GitHub Actions token cannot commit new workflow files.
+          # Upload the test workflow separately via the GitHub connector.
+          rm -f .github/workflows/tests.yml
           git add -A
           if ! git diff --cached --quiet; then
             git commit -m "feat: import Agent Team v0.2 source"
