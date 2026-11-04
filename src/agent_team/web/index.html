@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101419">
+  <meta name="description" content="Agent Team 智能体团队跨端工作台">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="stylesheet" href="/app.css">
+  <title>Agent Team · 智能体团队</title>
+</head>
+<body>
+  <div class="shell" id="shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand"><div class="brand-icon">✦</div><div><b>Agent Team</b><small>智能体团队 · v0.2</small></div><button id="close-sidebar" class="only-mobile icon-button" aria-label="关闭侧栏">✕</button></div>
+      <div class="sidebar-actions"><button id="new-chat" class="primary-button">＋ 新建聊天 / 群组</button></div>
+      <div class="section-heading"><span>消息</span><span id="chat-count"></span></div>
+      <div id="conversation-list" class="conversation-list"></div>
+      <div class="section-heading"><span>你的智能体</span><button id="new-agent" aria-label="新建智能体">＋</button></div>
+      <div id="agent-list" class="agent-list"></div>
+      <div class="sidebar-footer">
+        <button id="manage-credentials">⚙ 模型与凭据</button>
+        <button id="manage-skills">◈ Skills</button>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <button id="open-sidebar" class="only-mobile icon-button" aria-label="打开菜单">☰</button>
+        <div class="chat-heading"><h1 id="conversation-title">智能体工作台</h1><p id="conversation-subtitle">像聊天一样，和一个团队协作</p></div>
+        <button id="edit-agent" class="outline-button" hidden>编辑智能体</button>
+      </header>
+      <div id="welcome" class="welcome">
+        <div class="welcome-icon">✦</div>
+        <h2>你的 AI 团队，从一次对话开始</h2>
+        <p>每个智能体拥有自己的名字、角色、模型和技能。可单聊，可在群聊中 @成员，也能让成员协作完成任务。</p>
+        <div class="welcome-actions"><button id="welcome-chat" class="primary-button">开始聊天</button><button id="welcome-agent" class="outline-button">创建智能体</button></div>
+        <p class="fineprint">初始成员使用演示模型，不产生真实 AI 回复；添加模型凭据即可启用。</p>
+      </div>
+      <div class="messages" id="messages" hidden aria-live="polite"></div>
+      <div class="chat-bottom" id="chat-bottom" hidden>
+        <div id="mode-tip" class="mode-tip"></div>
+        <form id="composer" class="composer"><textarea id="message-input" rows="1" maxlength="8000" placeholder="发消息…（Enter 发送，Shift+Enter 换行）"></textarea><button type="submit" id="send-button" aria-label="发送消息">↑</button></form>
+        <div class="bottom-note">协作轮数有上限 · 模型请求可能产生费用 · AI 内容需核实</div>
+      </div>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status"></div>
+  <dialog id="dialog"><div id="dialog-body"></div></dialog>
+  <script src="/app.js" defer></script>
+</body>
+</html>

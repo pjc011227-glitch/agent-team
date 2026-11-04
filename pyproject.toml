@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-team"
+version = "0.2.0"
+description = "跨端智能体私聊、群聊和协作工作台（PWA + Python 服务端）"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.110,<1",
+    "pydantic>=2,<3",
+    "uvicorn>=0.29,<1",
+    "cryptography>=42,<49",
+]
+
+[project.optional-dependencies]
+test = ["httpx>=0.26", "pytest>=8"]
+
+[project.scripts]
+agent-team-server = "agent_team.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+agent_team = ["web/*"]

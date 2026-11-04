@@ -1,0 +1,22 @@
+# Codex / Agent 工作规则
+
+## 产品愿景
+
+Agent Team 是一个聊天式的智能体团队客户端：一人一 Agent，支持私聊、群聊、@点名、有界协作、独立模型凭据、命名备注、Skill 与未来 Plugin。Windows、Linux、Android 应共享核心业务逻辑，禁止不必要的三端重复开发。
+
+## 开发规则
+
+1. 优先使用现有代码，先运行 `python -m unittest discover -s tests -v` 再修改。
+2. 不得宣称已有 `.exe`/`.apk` 或原生客户端，现阶段仅为 PWA 原型。
+3. 不得把 API Key、OAuth Token、Cookie、数据库或 `encryption.key` 写入仓库。
+4. 认证与调用官方 API：不要绕过供应商 OAuth，不要复用用户网页订阅会话。
+5. Skill 的文本指令与 Plugin 的可执行能力严格隔离，默认不授予文件、网络、Shell 权限。
+6. 对一个用户消息的群组任务要有明确调用上限和费用边界；避免无限多智能体循环。
+7. 每个功能提供离线测试。跨端 UI 要同时审查 360px 手机视口和至少 1200px 桌面视口。
+8. 保持 `README.md`、`docs/PRODUCT_SPEC.md`、`docs/ROADMAP.md` 随实现同步更新。
+9. 不要为了接入新模型而大规模重构旧 Provider adapter；优先加小而清晰的适配层。
+10. 所有默认端口只绑定 loopback，远程访问必须考虑 HTTPS、认证与访问范围。
+
+## 下一步优先项
+
+稳定界面 → 流式输出和重试 → 群组可编辑 → 原生 Tauri 包装 → Plugin 沙箱 → 官方 OAuth 逐供应商接入。
