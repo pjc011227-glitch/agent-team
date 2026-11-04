@@ -82,3 +82,7 @@ Android 手机（Web/PWA，未来 APK）     Windows / Linux 桌面（Web/PWA，
 - 增加 `read_text`：手机可请求读取**事先授权工作目录内**的 UTF-8 `.txt`、`.md`、`.csv`、`.json`、`.py`、`.log`、`.yaml`、`.yml`、`.toml` 文件，限制 12KB。
 - 修复通过工作目录内符号链接指向隐藏文件的路径绕过风险；目录联接点也会拒绝。
 - 不意味着可以远程访问整台电脑的文件。请勿把密码、令牌、个人隐私文件放进授权目录。
+
+## 服务器一键部署
+
+新增 [Docker Compose Hub 部署指南](DEPLOYMENT.md) 与 GitHub Actions 容器构建检查。默认 Docker 端口只绑定宿主机回环，不能直接通过公共 IP 访问，必须由 HTTPS 反向代理或私有 VPN 暴露。

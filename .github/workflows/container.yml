@@ -1,0 +1,25 @@
+name: Docker build
+on:
+  push:
+    paths:
+      - Dockerfile
+      - compose.yaml
+      - .dockerignore
+      - src/**
+      - pyproject.toml
+      - .github/workflows/container.yml
+  pull_request:
+    paths:
+      - Dockerfile
+      - compose.yaml
+      - .dockerignore
+      - src/**
+      - pyproject.toml
+      - .github/workflows/container.yml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build protected Hub image
+        run: docker build -t agent-team-hub:ci .

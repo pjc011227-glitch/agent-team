@@ -2,16 +2,18 @@
 
 **像聊天一样使用智能体：一个机器人就是一个独立的角色，多个机器人可以加入群聊或有界协作。**
 
-> 状态：**v0.3.2 远程设备任务代理 MVP / 可运行的跨端 Web/PWA 原型**。现阶段不是 Windows `.exe`、Linux 安装包或 Android `.apk`；后续通过 Tauri 2 封装原生安装包。项目没有声称支持用 ChatGPT Plus / Claude Pro 等网页订阅直接调用模型。
+> 状态：**v0.3.3 远程设备任务代理 MVP / 可运行的跨端 Web/PWA 原型**。现阶段不是 Windows `.exe`、Linux 安装包或 Android `.apk`；后续通过 Tauri 2 封装原生安装包。项目没有声称支持用 ChatGPT Plus / Claude Pro 等网页订阅直接调用模型。
 
 
-## v0.3.2：手机远程给电脑下发任务（受限版）
+## v0.3.3：手机远程给电脑下发任务（受限版）
 
 现在可以把同一个 Agent Team 服务器部署在 HTTPS 域名后，手机和电脑 Web/PWA 访问同一服务端，**共享会话及任务状态**。受控电脑运行 `agent-team-worker`，通过出站 HTTPS 主动轮询云服务器的任务队列，执行白名单任务并将结果回传手机。
 
 - 在手机打开 `/remote.html`，使用所有者访问口令创建电脑设备，获取仅显示一次的设备密钥。
 - 电脑设置 `AGENT_TEAM_HUB_URL` 和 `AGENT_TEAM_DEVICE_TOKEN`，运行 `agent-team-worker --workspace <授权工作目录>`；可选 `--allow-write`，只允许往 `AgentTeamInbox` 写新便签。
 - 支持：设备心跳/撤销、查询系统信息、列出授权目录、读取限量文本文件、接收任务通知、保存便签；手机查看任务结果，并可以取消待执行任务、手动重试失败或中断任务；中断任务不会自动重跑。**没有远程 Shell、GUI 自动操作或原生 APK/.exe。**
+
+如果要让手机跨网络连接，可使用新增的 [Docker Compose 部署教程](docs/DEPLOYMENT.md) 配置单机 Hub，再通过 HTTPS/VPN 暴露给已授权设备。
 
 使用前请读 [远程控制部署与安全说明](docs/REMOTE_CONTROL.md)，包括 TLS / VPN、权限边界和限制。现阶段不适合直接公网暴露裸服务。
 
@@ -97,7 +99,7 @@ agent-team/
 │   ├── provider.py           # 保留早期 CLI API 适配器
 │   └── web/                  # 自适应 PWA（HTML/CSS/JS）
 ├── docs/                     # 产品规格、架构、安全与路线图
-├── tests/                    # 29 项离线测试（含旧 CLI）
+├── tests/                    # 31 项离线测试（含旧 CLI）
 ├── scripts/                  # 启动脚本
 ├── AGENTS.md                 # Codex/编码智能体协作规范
 └── pyproject.toml

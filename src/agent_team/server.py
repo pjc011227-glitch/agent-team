@@ -70,7 +70,7 @@ class ResultInput(BaseModel):
 
 
 def create_app(data_dir: str | Path | None = None) -> FastAPI:
-    app = FastAPI(title="Agent Team", version="0.3.2", docs_url=None, redoc_url=None)
+    app = FastAPI(title="Agent Team", version="0.3.3", docs_url=None, redoc_url=None)
     app.state.store = Store(data_dir)
     remote.initialize(app.state.store)
     access_token = os.getenv("AGENT_TEAM_ACCESS_TOKEN", "")
@@ -109,7 +109,7 @@ def create_app(data_dir: str | Path | None = None) -> FastAPI:
 
     @app.get("/api/status")
     def status():
-        return {"ok": True, "protected": bool(access_token), "version": "0.3.2"}
+        return {"ok": True, "protected": bool(access_token), "version": "0.3.3"}
 
     @app.get("/api/state")
     def state(x_agent_team_token: str | None = Header(default=None)):

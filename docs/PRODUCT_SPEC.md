@@ -1,4 +1,4 @@
-# Agent Team · 产品规格（v0.3.2）
+# Agent Team · 产品规格（v0.3.3）
 
 ## 核心愿景
 
@@ -52,3 +52,5 @@
 - [ ] 本地原生客户端 + 后台 Worker、Android APK 和安全系统服务管理。
 
 - [x] 授权工作目录内的有限纯文本读取与链接穿透防护（12KB，限定后缀）。
+
+- [x] 可在 Linux 服务器用 Docker Compose 运行中心 Hub；宿主端口仅绑定本机回环，手机需 HTTPS/VPN 接入。

@@ -1,0 +1,23 @@
+services:
+  hub:
+    build: .
+    restart: unless-stopped
+    init: true
+    environment:
+      AGENT_TEAM_ACCESS_TOKEN: "${AGENT_TEAM_ACCESS_TOKEN:?Set a long random AGENT_TEAM_ACCESS_TOKEN in .env first}"
+      AGENT_TEAM_DATA_DIR: /data
+    ports:
+      # Localhost ONLY: terminate TLS through your host reverse proxy or VPN.
+      - "127.0.0.1:8765:8765"
+    volumes:
+      - agentteam_data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  agentteam_data:
