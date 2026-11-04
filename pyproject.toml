@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agent-team"
-version = "0.2.0"
+version = "0.3.1"
 description = "跨端智能体私聊、群聊和协作工作台（PWA + Python 服务端）"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -20,6 +20,7 @@ test = ["httpx>=0.26", "pytest>=8"]
 
 [project.scripts]
 agent-team-server = "agent_team.server:main"
+agent-team-worker = "agent_team.desktop_worker:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

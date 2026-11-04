@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN"><head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101419">
+  <link rel="manifest" href="/manifest.webmanifest"><link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/remote.css"><title>远程设备 · Agent Team</title>
+</head><body>
+  <main class="remote-shell">
+    <header class="remote-heading"><a href="/" class="backlink">← 返回聊天</a><h1>🖥 交代任务 · 追踪进展</h1>
+      <p>像安排工作一样交代任务，随时看执行结果。Windows / Linux 电脑通过 HTTPS 主动领取任务；当前仅支持受控动作，不会自动理解自然语言并操作软件。</p></header>
+    <section class="remote-panel">
+      <div class="row-heading"><h2>我的设备</h2><button id="add-device" class="primary-button">＋ 配对新电脑</button></div>
+      <div id="device-list" class="remote-list">正在加载…</div>
+      <p class="remote-caption">设备密钥仅在创建时显示一次，服务器只存储哈希。撤销设备后旧密钥立即失效。</p>
+    </section>
+    <section class="remote-panel" id="task-panel" hidden>
+      <div class="row-heading"><h2>发送任务</h2><span id="selected-name"></span></div>
+      <div class="remote-form-grid">
+        <label>动作<select id="action"><option value="notify">发送任务通知（不会自动运行）</option><option value="system_info">查询电脑系统信息</option><option value="list_files">列出授权工作目录</option><option value="write_note">在授权工作目录保存便签（电脑端需允许写入）</option></select></label>
+        <label id="payload-label">任务内容<textarea id="payload" rows="4" maxlength="8000" placeholder="例如：请在电脑上处理项目报告"></textarea></label>
+      </div>
+      <button id="send-task" class="primary-button">发送到电脑</button>
+      <div class="task-toolbar"><h3>任务进度</h3><label>筛选 <select id="task-filter" aria-label="筛选任务"><option value="all">全部</option><option value="active">待办 / 执行中</option><option value="completed">已完成</option><option value="attention">需要处理</option></select></label></div>
+      <div class="task-legend">排队 → 电脑领取 → 执行 → 回传结果。断线任务不会自动重放，以免重复操作。</div>
+      <div id="task-list" class="remote-list" aria-live="polite">尚无任务</div>
+    </section>
+    <section class="remote-panel"><h2>使用说明</h2>
+      <p>① 在服务器上运行 Agent Team（必须配置所有者口令、HTTPS 或 VPN）；② 为电脑创建设备，保存一次性设备密钥；③ 在电脑安装项目并启动 <code>agent-team-worker</code>；④ 在此页面选择设备发送任务。</p>
+      <p class="remote-caption">本版本提供的是受限任务代理，不是任意远程 Shell，也不能操纵桌面窗口。真正的 GUI 自动化需本机权限审批和独立插件。</p>
+    </section>
+    <div class="remote-toast" id="toast" role="status"></div>
+    <dialog id="pair-dialog"><div class="pair-body"><h2>设备密钥（仅显示一次）</h2>
+      <p>不要把此密钥发给陌生人。通过可信方式复制到需要受控的电脑。</p>
+      <textarea id="device-secret" readonly rows="3"></textarea>
+      <p>在电脑上设置 <code>AGENT_TEAM_DEVICE_TOKEN</code>，再运行：</p>
+      <code>agent-team-worker --server https://你的服务器域名 --workspace 你的授权目录</code>
+      <div class="pair-actions"><button id="copy-secret" class="primary-button">复制密钥</button><button id="close-dialog" class="outline-button">我已保存</button></div>
+    </div></dialog>
+  </main>
+  <script src="/remote.js" defer></script>
+</body></html>

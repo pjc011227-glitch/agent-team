@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 
 from .chat_service import ChatError, reply_to_message, validate_endpoint
 from .storage import DEFAULT_ENDPOINTS, Store
+from . import remote
 
 
 class CredentialInput(BaseModel):
@@ -50,14 +51,45 @@ class MessageInput(BaseModel):
     text: str = Field(min_length=1, max_length=8000)
 
 
+class DeviceInput(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+
+
+class TaskInput(BaseModel):
+    action: Literal["system_info", "list_files", "notify", "write_note"]
+    payload: dict = Field(default_factory=dict)
+
+
+class HeartbeatInput(BaseModel):
+    platform: str = Field(default="", max_length=100)
+
+
+class ResultInput(BaseModel):
+    ok: bool
+    result: str = Field(default="", max_length=16000)
+
+
 def create_app(data_dir: str | Path | None = None) -> FastAPI:
-    app = FastAPI(title="Agent Team", version="0.2.0", docs_url=None, redoc_url=None)
+    app = FastAPI(title="Agent Team", version="0.3.1", docs_url=None, redoc_url=None)
     app.state.store = Store(data_dir)
+    remote.initialize(app.state.store)
     access_token = os.getenv("AGENT_TEAM_ACCESS_TOKEN", "")
 
     def auth(x_agent_team_token: str | None = Header(default=None)):
         if access_token and not hmac.compare_digest(x_agent_team_token or "", access_token):
             raise HTTPException(status_code=401, detail="需要访问口令")
+
+    def owner_auth(x_agent_team_token: str | None = Header(default=None)):
+        # Remote control must not be enabled on a hub without an owner secret.
+        if not access_token:
+            raise HTTPException(status_code=503, detail="先配置 AGENT_TEAM_ACCESS_TOKEN 才能启用远程控制")
+        auth(x_agent_team_token)
+
+    def worker_token(authorization: str | None) -> str:
+        scheme, _, token = (authorization or "").partition(" ")
+        if scheme.lower() != "bearer" or not token or not remote.device_from_token(app.state.store, token):
+            raise HTTPException(status_code=401, detail="设备凭据无效")
+        return token
 
     def fail(error: str, status_code: int = 400):
         raise HTTPException(status_code=status_code, detail=error)
@@ -77,7 +109,7 @@ def create_app(data_dir: str | Path | None = None) -> FastAPI:
 
     @app.get("/api/status")
     def status():
-        return {"ok": True, "protected": bool(access_token), "version": "0.2.0"}
+        return {"ok": True, "protected": bool(access_token), "version": "0.3.1"}
 
     @app.get("/api/state")
     def state(x_agent_team_token: str | None = Header(default=None)):
@@ -170,6 +202,79 @@ def create_app(data_dir: str | Path | None = None) -> FastAPI:
             cursor = db.execute("DELETE FROM conversations WHERE id=?", (conversation_id,))
         if not cursor.rowcount:
             fail("会话不存在", 404)
+        return {"ok": True}
+
+
+    # Remote execution is isolated from normal chat: worker device tokens do not
+    # authorize /api/state, model credentials, agent edits, or other devices.
+    @app.get("/api/devices")
+    def list_devices(x_agent_team_token: str | None = Header(default=None)):
+        owner_auth(x_agent_team_token)
+        return {"devices": remote.devices(app.state.store)}
+
+    @app.post("/api/devices", status_code=201)
+    def add_device(payload: DeviceInput, x_agent_team_token: str | None = Header(default=None)):
+        owner_auth(x_agent_team_token)
+        return remote.register(app.state.store, payload.name.strip())
+
+    @app.delete("/api/devices/{device_id}")
+    def revoke_device(device_id: str, x_agent_team_token: str | None = Header(default=None)):
+        owner_auth(x_agent_team_token)
+        if not remote.revoke(app.state.store, device_id):
+            fail("设备不存在", 404)
+        return {"ok": True}
+
+    @app.get("/api/devices/{device_id}/tasks")
+    def get_remote_tasks(device_id: str, x_agent_team_token: str | None = Header(default=None)):
+        owner_auth(x_agent_team_token)
+        if not any(d["id"] == device_id for d in remote.devices(app.state.store)):
+            fail("设备不存在", 404)
+        return {"tasks": remote.tasks(app.state.store, device_id)}
+
+    @app.post("/api/devices/{device_id}/tasks", status_code=201)
+    def post_remote_task(device_id: str, payload: TaskInput,
+                         x_agent_team_token: str | None = Header(default=None)):
+        owner_auth(x_agent_team_token)
+        try:
+            return remote.enqueue(app.state.store, device_id, payload.action, payload.payload)
+        except remote.RemoteError as exc:
+            fail(str(exc))
+
+    @app.post("/api/devices/{device_id}/tasks/{task_id}/cancel")
+    def cancel_remote_task(device_id: str, task_id: str,
+                           x_agent_team_token: str | None = Header(default=None)):
+        owner_auth(x_agent_team_token)
+        try:
+            remote.cancel_task(app.state.store, device_id, task_id)
+        except remote.RemoteError as exc:
+            fail(str(exc), 409 if "只能取消" in str(exc) else 404)
+        return {"ok": True}
+
+    @app.post("/api/devices/{device_id}/tasks/{task_id}/retry", status_code=201)
+    def retry_remote_task(device_id: str, task_id: str,
+                          x_agent_team_token: str | None = Header(default=None)):
+        owner_auth(x_agent_team_token)
+        try:
+            return remote.retry_task(app.state.store, device_id, task_id)
+        except remote.RemoteError as exc:
+            fail(str(exc), 409 if "只能重试" in str(exc) else 404)
+
+    @app.post("/api/device/heartbeat")
+    def device_heartbeat(payload: HeartbeatInput, authorization: str | None = Header(default=None)):
+        token = worker_token(authorization)
+        return remote.heartbeat(app.state.store, token, payload.platform)
+
+    @app.get("/api/device/jobs/next")
+    def device_next_job(authorization: str | None = Header(default=None)):
+        token = worker_token(authorization)
+        return {"task": remote.claim(app.state.store, token)}
+
+    @app.post("/api/device/jobs/{task_id}/result")
+    def device_result(task_id: str, payload: ResultInput,
+                      authorization: str | None = Header(default=None)):
+        token = worker_token(authorization)
+        if not remote.finish(app.state.store, token, task_id, payload.ok, payload.result):
+            fail("任务不存在、已结束或不属于当前设备", 404)
         return {"ok": True}
 
     assets = Path(__file__).parent / "web"

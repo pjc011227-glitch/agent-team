@@ -15,3 +15,8 @@
 - 本地系统 Keychain/Keystore、服务器 Vault / Secret Manager 集成。
 - 端点 DNS/IP 级 SSRF 防护、代理规则、域名 allowlist（适合多人共享服务器的场景）。
 - 安装插件的签名、版本锁定、运行时沙箱、外部网络和文件权限。
+
+
+## 远程任务执行（v0.3）
+
+远程设备令牌仅能访问 heartbeat/领取任务/回传结果，不能用于所有者 API、模型凭据或其他设备。令牌在服务端只存 SHA-256 哈希；设备撤销后失效。远程控制 API 要求服务器配置所有者口令；电脑 Worker 只接受 HTTPS（或本机测试 HTTP）。命令执行与通用鼠标键盘权限尚未实现。详情见 [远程执行设计](REMOTE_CONTROL.md)。

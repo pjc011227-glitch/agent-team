@@ -1,4 +1,4 @@
-# 架构设计（v0.2）
+# 架构设计（v0.3）
 
 ```text
 Windows / Linux 浏览器/PWA    Android 浏览器/PWA
@@ -62,3 +62,8 @@ Windows / Linux 浏览器/PWA    Android 浏览器/PWA
 ```
 
 以上是**设计示例，不是已经存在的插件安装格式**。后续应加入隔离进程/容器、权限白名单、版本/来源验证、运行审计、撤销授权和逐次确认敏感操作。
+
+
+## 远程设备任务（v0.3）
+
+参见 [远程控制](REMOTE_CONTROL.md)；新增 `remote_devices`、`remote_tasks`，设备 Worker 使用与用户令牌分离的一次性设备密钥，通过 HTTPS 轮询单设备队列；服务器负责跨手机/电脑聊天数据同步与任务状态持久化。当前未支持任意 GUI 工具调用。

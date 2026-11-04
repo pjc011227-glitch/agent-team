@@ -7,7 +7,7 @@ const avatar = a => esc(a?.avatar || '🤖');
 const dateTime = iso => iso ? new Date(iso).toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'}) : '';
 const modeNames = {mention:'@点名 · 默认由首位成员回复',roundtable:'圆桌 · 所有成员依次发言（最多 4 位）',cooperate:'协作 · 最多 4 位成员接力完善答案'};
 let state = {conversations:[], agents:[], credentials:[], skills:[], providers:{}};
-let current = null, busy = false, toastTimer;
+let current = null, busy = false, toastTimer, lastSeenMessageIds = "";
 
 function toast(message, error=false) {
   const el = $('toast'); el.textContent=message; el.className=`toast visible${error?' error':''}`;
@@ -55,6 +55,7 @@ function renderHeader() {
   const edit=$('edit-agent');edit.hidden=c.kind!=='direct';edit.dataset.agent=c.agent_ids[0]||'';
 }
 function renderMessages(messages) {
+  lastSeenMessageIds = messages.map(m=>m.id).join('|');
   const el=$('messages');
   el.innerHTML=messages.length ? messages.map(m => {
     const isUser=m.sender==='user',a=agentById(m.agent_id);
@@ -202,4 +203,19 @@ async function startup(){
   }
   try{await refresh();}catch(e){toast(e.message,true);}
 }
+// Lightweight multi-device synchronization while this tab is visible.
+// Uses the same central conversation database; no LLM calls are triggered.
+setInterval(async () => {
+  if (document.hidden || busy || !current) return;
+  const id = current;
+  try {
+    const data = await api(`/conversations/${encodeURIComponent(id)}/messages`);
+    if (current !== id || busy) return;
+    const ids = data.messages.map(m => m.id).join('|');
+    if (ids !== lastSeenMessageIds) {
+      renderMessages(data.messages);
+      await refresh();
+    }
+  } catch { /* The normal next user request will show a detailed error. */ }
+}, 8000);
 document.addEventListener('DOMContentLoaded',startup);

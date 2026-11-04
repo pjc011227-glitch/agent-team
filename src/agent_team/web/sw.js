@@ -1,5 +1,5 @@
-const VERSION = 'agent-team-static-v2';
-const ASSETS = ['/', '/index.html', '/app.css', '/app.js', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png'];
+const VERSION = 'agent-team-static-v3';
+const ASSETS = ['/', '/index.html', '/app.css', '/app.js', '/remote.html', '/remote.css', '/remote.js', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(VERSION).then(cache => cache.addAll(ASSETS)));
   self.skipWaiting();
