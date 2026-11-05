@@ -7,7 +7,7 @@
 </head><body>
   <main class="remote-shell">
     <header class="remote-heading"><a href="/" class="backlink">← 返回聊天</a><h1>🖥 交代任务 · 追踪进展</h1>
-      <p>像安排工作一样交代任务，随时看执行结果。Windows / Linux 电脑通过 HTTPS 主动领取任务；当前仅支持受控动作，不会自动理解自然语言并操作软件。</p></header>
+      <p>像安排工作一样交代任务，随时看执行结果。Windows / Linux 电脑通过 HTTPS 主动领取任务；目前支持少量明确的自然语言指令，先预览、后确认；不会自动操纵任意软件。</p></header>
     <section class="remote-panel">
       <div class="row-heading"><h2>我的设备</h2><button id="add-device" class="primary-button">＋ 配对新电脑</button></div>
       <div id="device-list" class="remote-list">正在加载…</div>
@@ -15,18 +15,38 @@
     </section>
     <section class="remote-panel" id="task-panel" hidden>
       <div class="row-heading"><h2>发送任务</h2><span id="selected-name"></span></div>
+      <div class="natural-task">
+        <label for="natural-input">直接用一句话交代工作</label>
+        <textarea id="natural-input" rows="3" maxlength="500" placeholder="例如：搜索关键词 TODO / 读取 README.md / 运行单元测试"></textarea>
+        <div class="natural-examples" aria-label="快速指令示例">
+          <button type="button" data-example="查看电脑状态">电脑状态</button>
+          <button type="button" data-example="列出工作目录">工作目录</button>
+          <button type="button" data-example="搜索关键词 TODO">搜索 TODO</button>
+          <button type="button" data-example="运行单元测试">运行测试</button>
+        </div>
+        <button id="preview-task" class="primary-button" type="button">理解指令，查看执行方案</button>
+        <section id="task-preview" class="task-preview" hidden aria-live="polite">
+          <h3>执行前确认</h3>
+          <p id="preview-summary"></p>
+          <p id="preview-detail" class="remote-caption"></p>
+          <p class="remote-caption">预览不会执行。请确认目标设备和任务内容。电脑端仍执行本地权限检查。</p>
+          <div class="preview-buttons"><button id="confirm-preview" class="primary-button" type="button">确认交给电脑</button><button id="dismiss-preview" class="outline-button" type="button">取消</button></div>
+        </section>
+      </div>
+      <details class="advanced-task"><summary>高级：手动选择受控动作</summary>
       <div class="remote-form-grid">
-        <label>动作<select id="action"><option value="notify">发送任务通知（不会自动运行）</option><option value="system_info">查询电脑系统信息</option><option value="list_files">列出授权工作目录</option><option value="read_text">读取授权目录内文本文件（最多 12KB）</option><option value="write_note">在授权工作目录保存便签（电脑端需允许写入）</option></select></label>
+        <label>动作<select id="action"><option value="notify">发送任务通知（不会自动运行）</option><option value="system_info">查询电脑系统信息</option><option value="list_files">列出授权工作目录</option><option value="read_text">读取授权目录内文本文件（最多 12KB）</option><option value="write_note">在授权工作目录保存便签（电脑端需允许写入）</option><option value="search_text">在授权目录内搜索关键词</option><option value="run_tests">运行授权项目的单元测试（电脑端需允许）</option></select></label>
         <label id="payload-label">任务内容<textarea id="payload" rows="4" maxlength="8000" placeholder="例如：请在电脑上处理项目报告"></textarea></label>
       </div>
       <button id="send-task" class="primary-button">发送到电脑</button>
+      </details>
       <div class="task-toolbar"><h3>任务进度</h3><label>筛选 <select id="task-filter" aria-label="筛选任务"><option value="all">全部</option><option value="active">待办 / 执行中</option><option value="completed">已完成</option><option value="attention">需要处理</option></select></label></div>
       <div class="task-legend">排队 → 电脑领取 → 执行 → 回传结果。断线任务不会自动重放，以免重复操作。</div>
       <div id="task-list" class="remote-list" aria-live="polite">尚无任务</div>
     </section>
     <section class="remote-panel"><h2>使用说明</h2>
       <p>① 在服务器上运行 Agent Team（必须配置所有者口令、HTTPS 或 VPN）；② 为电脑创建设备，保存一次性设备密钥；③ 在电脑安装项目并启动 <code>agent-team-worker</code>；④ 在此页面选择设备发送任务。</p>
-      <p class="remote-caption">本版本提供的是受限任务代理，不是任意远程 Shell，也不能操纵桌面窗口。真正的 GUI 自动化需本机权限审批和独立插件。</p>
+      <p class="remote-caption">智能体只会解析固定的少量自然语言模板，无法执行任意自然语言任务；远程 Shell 和桌面窗口控制尚未实现。运行测试会执行本机项目代码，仅适用于你信任的项目，并需要电脑端启动参数授权。真正的 GUI 自动化需本机权限审批和独立插件。</p>
     </section>
     <div class="remote-toast" id="toast" role="status"></div>
     <dialog id="pair-dialog"><div class="pair-body"><h2>设备密钥（仅显示一次）</h2>

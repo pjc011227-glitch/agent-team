@@ -9,6 +9,7 @@ import argparse
 import json
 import os
 import platform
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -57,8 +58,86 @@ def workspace_path(workspace: Path, rel: str = ".") -> Path:
     return result
 
 
+TEXT_EXTENSIONS = frozenset({".txt", ".md", ".csv", ".json", ".py", ".log", ".yaml", ".yml", ".toml"})
+
+
+def search_text(workspace: Path, directory: str, query: str) -> str:
+    if not isinstance(query, str) or not (1 <= len(query.strip()) <= 100):
+        raise WorkerError("搜索关键词应为 1–100 个字符")
+    root = workspace.resolve(strict=True)
+    current = workspace_path(root, directory)
+    if not current.is_dir():
+        raise WorkerError("指定的搜索位置不是文件夹")
+    results = []
+    scanned = 0
+    keyword = query.casefold()
+    for directory_path, subdirs, filenames in os.walk(current, followlinks=False):
+        # Do not traverse symlinks, Windows junctions, or hidden directories.
+        subdirs[:] = sorted(name for name in subdirs if not name.startswith(".")
+                            and name not in {"__pycache__", "node_modules"}
+                            and not (Path(directory_path) / name).is_symlink()
+                            and not (hasattr(Path(directory_path) / name, "is_junction")
+                                     and (Path(directory_path) / name).is_junction()))
+        for name in sorted(filenames):
+            if scanned >= 200 or len(results) >= 30:
+                break
+            file = Path(directory_path) / name
+            if name.startswith(".") or file.is_symlink() or (hasattr(file, "is_junction") and file.is_junction()):
+                continue
+            if file.suffix.lower() not in TEXT_EXTENSIONS or not file.is_file():
+                continue
+            try:
+                if file.stat().st_size > 120000:
+                    continue
+                # Revalidate the path, after enumeration, before each read.
+                safe = workspace_path(root, str(file.relative_to(root)))
+                scanned += 1
+                with safe.open("r", encoding="utf-8") as handle:
+                    for line_number, line in enumerate(handle, 1):
+                        if keyword in line.casefold():
+                            results.append({"file": safe.relative_to(root).as_posix(),
+                                            "line": line_number, "text": line.strip()[:220]})
+                            if len(results) >= 30:
+                                break
+            except (OSError, UnicodeError, WorkerError):
+                continue
+        if scanned >= 200 or len(results) >= 30:
+            break
+    return json.dumps({"matches": results, "files_scanned": scanned,
+                       "truncated": scanned >= 200 or len(results) >= 30}, ensure_ascii=False)
+
+
+def run_project_tests(workspace: Path) -> str:
+    root = workspace.resolve(strict=True)
+    tests = workspace_path(root, "tests")
+    if not tests.is_dir():
+        raise WorkerError("授权目录内没有 tests 文件夹，拒绝执行")
+    # Run only the pinned command, never an LLM-provided command or shell string.
+    # Python tests themselves execute trusted workspace code; this is an opt-in.
+    env = {key: value for key, value in os.environ.items()
+           if not key.upper().startswith("AGENT_TEAM_") and not any(
+               marker in key.upper() for marker in ("TOKEN", "SECRET", "PASSWORD", "API_KEY", "AUTH_"))}
+    src = root / "src"
+    if src.is_dir() and not src.is_symlink():
+        env["PYTHONPATH"] = str(src)
+    else:
+        env.pop("PYTHONPATH", None)
+    try:
+        proc = subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"],
+                              cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                              text=True, errors="replace", timeout=90, check=False)
+    except subprocess.TimeoutExpired as exc:
+        raise WorkerError("自动测试超过 90 秒，已终止") from exc
+    # Strip terminal escape/control sequences from output (not a secret scrubber).
+    clean = "".join(c for c in proc.stdout[-12000:] if c.isprintable() or c in "\n\t")
+    result = f"退出码：{proc.returncode}\n{clean}"
+    if proc.returncode:
+        raise WorkerError(result[:12000])
+    return result[:12000]
+
+
 def execute(action: str, payload: dict, workspace: Path | None = None,
-            allow_write: bool = False) -> str:
+            allow_write: bool = False, allow_tests: bool = False) -> str:
     if action == "system_info":
         return json.dumps({"platform": platform.system(), "version": platform.release(),
                            "python": platform.python_version()}, ensure_ascii=False)
@@ -84,7 +163,7 @@ def execute(action: str, payload: dict, workspace: Path | None = None,
         target = workspace_path(workspace, payload.get("path", ""))
         if not target.is_file():
             raise WorkerError("目标不是普通文件")
-        if target.suffix.lower() not in {".txt", ".md", ".csv", ".json", ".py", ".log", ".yaml", ".yml", ".toml"}:
+        if target.suffix.lower() not in TEXT_EXTENSIONS:
             raise WorkerError("只允许读取常用的纯文本文件类型")
         if target.stat().st_size > 12000:
             raise WorkerError("文件超过 12KB，请缩小范围后再读取")
@@ -92,6 +171,12 @@ def execute(action: str, payload: dict, workspace: Path | None = None,
             return target.read_text(encoding="utf-8")
         except UnicodeError as exc:
             raise WorkerError("文件不是有效的 UTF-8 文本") from exc
+    if action == "search_text":
+        return search_text(workspace, payload.get("path", "."), payload.get("query", ""))
+    if action == "run_tests":
+        if not allow_tests:
+            raise WorkerError("电脑端尚未启用 --allow-tests；拒绝运行项目测试代码")
+        return run_project_tests(workspace)
     if action == "write_note":
         if not allow_write:
             raise WorkerError("电脑端未开启 --allow-write，拒绝写入")
@@ -130,6 +215,8 @@ def main() -> None:
     parser.add_argument("--server", default=os.getenv("AGENT_TEAM_HUB_URL", ""))
     parser.add_argument("--workspace", type=Path, help="可列目录/保存便签的授权文件夹")
     parser.add_argument("--allow-write", action="store_true", help="允许在工作目录的 AgentTeamInbox 新建便签")
+    parser.add_argument("--allow-tests", action="store_true",
+                        help="允许运行工作目录中的 unittest 测试（测试代码具有本机用户权限，只用于可信项目）")
     parser.add_argument("--once", action="store_true", help="只检查一次，适合测试")
     parser.add_argument("--interval", type=int, default=4, help="轮询间隔（秒，至少 3）")
     args = parser.parse_args()
@@ -149,7 +236,7 @@ def main() -> None:
             job = data.get("task")
             if job:
                 try:
-                    result = execute(job["action"], job["payload"], args.workspace, args.allow_write)
+                    result = execute(job["action"], job["payload"], args.workspace, args.allow_write, args.allow_tests)
                     ok = True
                 except (WorkerError, OSError, ValueError) as exc:
                     result, ok = str(exc), False

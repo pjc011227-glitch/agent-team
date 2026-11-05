@@ -2,10 +2,10 @@
 
 **像聊天一样使用智能体：一个机器人就是一个独立的角色，多个机器人可以加入群聊或有界协作。**
 
-> 状态：**v0.3.3 远程设备任务代理 MVP / 可运行的跨端 Web/PWA 原型**。现阶段不是 Windows `.exe`、Linux 安装包或 Android `.apk`；后续通过 Tauri 2 封装原生安装包。项目没有声称支持用 ChatGPT Plus / Claude Pro 等网页订阅直接调用模型。
+> 状态：**v0.4.0 远程设备任务代理 MVP / 可运行的跨端 Web/PWA 原型**。现阶段不是 Windows `.exe`、Linux 安装包或 Android `.apk`；后续通过 Tauri 2 封装原生安装包。项目没有声称支持用 ChatGPT Plus / Claude Pro 等网页订阅直接调用模型。
 
 
-## v0.3.3：手机远程给电脑下发任务（受限版）
+## 手机远程给电脑下发任务（基础链路从 v0.3.3 开始）
 
 现在可以把同一个 Agent Team 服务器部署在 HTTPS 域名后，手机和电脑 Web/PWA 访问同一服务端，**共享会话及任务状态**。受控电脑运行 `agent-team-worker`，通过出站 HTTPS 主动轮询云服务器的任务队列，执行白名单任务并将结果回传手机。
 
@@ -95,11 +95,14 @@ agent-team/
 │   ├── server.py             # FastAPI HTTP / 静态资源
 │   ├── storage.py            # SQLite、本地凭据加密、会话数据
 │   ├── chat_service.py       # 模型适配器、@点名、群聊编排
+│   ├── command_intent.py     # 自然语言安全意图预览
+│   ├── remote.py             # 服务器设备、权限和任务队列
+│   ├── desktop_worker.py     # 桌面受控工作目录任务执行
 │   ├── core.py               # 保留早期 CLI 任务协作引擎
 │   ├── provider.py           # 保留早期 CLI API 适配器
 │   └── web/                  # 自适应 PWA（HTML/CSS/JS）
 ├── docs/                     # 产品规格、架构、安全与路线图
-├── tests/                    # 31 项离线测试（含旧 CLI）
+├── tests/                    # 39 项离线测试（含旧 CLI）
 ├── scripts/                  # 启动脚本
 ├── AGENTS.md                 # Codex/编码智能体协作规范
 └── pyproject.toml
@@ -130,3 +133,12 @@ GitHub 仓库：https://github.com/pjc011227-glitch/agent-team 。
 ### 导入 Skill 文本
 
 在「Skills」面板可以从本地 `SKILL.md` 或 `.txt` 文件导入**纯文本指令**，编辑检查后保存，再分配给相应的智能体。导入操作不会安装依赖、运行脚本或执行文件内的命令。
+
+
+## v0.4：手机自然语言任务预览（安全白名单）
+
+打开服务器的 `/remote.html`，选择已配对电脑，输入“查看电脑状态”“列出工作目录”“读取 README.md”“搜索关键词 TODO”“运行单元测试”“保存便签：文字”“通知电脑：文字”。系统只对这些明确模板进行**确定性解析**，会在发送前显示任务预览并要求再次确认。不能把任意一句话变为任意电脑操作，无法理解的请求会拒绝，不会猜测或暗中运行。
+
+电脑端 `agent-team-worker --workspace <可信工作目录>` 支持只读的 `search_text`：最多扫描 200 个常见小文本文件，最多返回 30 个命中，跳过隐藏目录、符号链接和大文件。`run_tests` 仅在本地添加 `--allow-tests` 时执行固定的 `python -m unittest discover -s tests -v`，90 秒截止。不支持自定义 Shell。**Python 测试代码本身可以访问系统，必须只对你信任的工作目录启用 --allow-tests**；环境变量中的设备令牌和常见密钥会被过滤，但这不是完整沙箱。
+
+仍未完成：AI 自主规划电脑任务、鼠标键盘/浏览器操作、原生桌面 APK/EXE、实时截图、可信设备上的完整安全隔离。除非经用户明确授权并完成更严格的权限审批，不应自动开放这些功能。

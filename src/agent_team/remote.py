@@ -13,7 +13,7 @@ from typing import Any
 
 from .storage import Store, uid, utcnow
 
-ALLOWED_ACTIONS = frozenset({"system_info", "list_files", "read_text", "notify", "write_note"})
+ALLOWED_ACTIONS = frozenset({"system_info", "list_files", "read_text", "notify", "write_note", "search_text", "run_tests"})
 
 
 class RemoteError(ValueError):
@@ -111,8 +111,14 @@ def enqueue(store: Store, device_id: str, action: str, payload: dict[str, Any]) 
         text = payload.get("text", "")
         if not isinstance(text, str) or not (1 <= len(text) <= 8000):
             raise RemoteError("请输入不超过 8000 字的任务内容")
-    if action in {"list_files", "read_text"} and not isinstance(payload.get("path", "."), str):
+    if action in {"list_files", "read_text", "search_text"} and not isinstance(payload.get("path", "."), str):
         raise RemoteError("目录路径无效")
+    if action == "search_text":
+        query = payload.get("query", "")
+        if not isinstance(query, str) or not 1 <= len(query.strip()) <= 100:
+            raise RemoteError("搜索关键词应为 1–100 个字符")
+    if action == "run_tests" and payload:
+        raise RemoteError("测试任务不允许自定义命令或参数")
     task_id = uid()
     with store.connection() as db:
         db.execute("BEGIN IMMEDIATE")

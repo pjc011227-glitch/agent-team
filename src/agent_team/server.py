@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from .chat_service import ChatError, reply_to_message, validate_endpoint
 from .storage import DEFAULT_ENDPOINTS, Store
 from . import remote
+from .command_intent import IntentError, interpret
 
 
 class CredentialInput(BaseModel):
@@ -56,8 +57,12 @@ class DeviceInput(BaseModel):
 
 
 class TaskInput(BaseModel):
-    action: Literal["system_info", "list_files", "read_text", "notify", "write_note"]
+    action: Literal["system_info", "list_files", "read_text", "notify", "write_note", "search_text", "run_tests"]
     payload: dict = Field(default_factory=dict)
+
+
+class CommandInput(BaseModel):
+    text: str = Field(min_length=1, max_length=500)
 
 
 class HeartbeatInput(BaseModel):
@@ -70,7 +75,7 @@ class ResultInput(BaseModel):
 
 
 def create_app(data_dir: str | Path | None = None) -> FastAPI:
-    app = FastAPI(title="Agent Team", version="0.3.3", docs_url=None, redoc_url=None)
+    app = FastAPI(title="Agent Team", version="0.4.0", docs_url=None, redoc_url=None)
     app.state.store = Store(data_dir)
     remote.initialize(app.state.store)
     access_token = os.getenv("AGENT_TEAM_ACCESS_TOKEN", "")
@@ -109,7 +114,7 @@ def create_app(data_dir: str | Path | None = None) -> FastAPI:
 
     @app.get("/api/status")
     def status():
-        return {"ok": True, "protected": bool(access_token), "version": "0.3.3"}
+        return {"ok": True, "protected": bool(access_token), "version": "0.4.0"}
 
     @app.get("/api/state")
     def state(x_agent_team_token: str | None = Header(default=None)):
@@ -230,6 +235,17 @@ def create_app(data_dir: str | Path | None = None) -> FastAPI:
         if not any(d["id"] == device_id for d in remote.devices(app.state.store)):
             fail("设备不存在", 404)
         return {"tasks": remote.tasks(app.state.store, device_id)}
+
+    @app.post("/api/devices/{device_id}/interpret")
+    def preview_command(device_id: str, payload: CommandInput,
+                        x_agent_team_token: str | None = Header(default=None)):
+        owner_auth(x_agent_team_token)
+        if not any(d["id"] == device_id for d in remote.devices(app.state.store)):
+            fail("设备不存在", 404)
+        try:
+            return interpret(payload.text)
+        except IntentError as exc:
+            fail(str(exc), 422)
 
     @app.post("/api/devices/{device_id}/tasks", status_code=201)
     def post_remote_task(device_id: str, payload: TaskInput,

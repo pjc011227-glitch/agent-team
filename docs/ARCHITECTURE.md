@@ -67,3 +67,10 @@ Windows / Linux 浏览器/PWA    Android 浏览器/PWA
 ## 远程设备任务（v0.3）
 
 参见 [远程控制](REMOTE_CONTROL.md)；新增 `remote_devices`、`remote_tasks`，设备 Worker 使用与用户令牌分离的一次性设备密钥，通过 HTTPS 轮询单设备队列；服务器负责跨手机/电脑聊天数据同步与任务状态持久化。当前未支持任意 GUI 工具调用。
+
+
+## v0.4 自然语言入口与权限链
+
+手机 `/remote.html` 将文字发送至 `POST /api/devices/{id}/interpret`，服务端 `command_intent.interpret()` 只返回明确的单步预览，不创建任务。用户手动确认后才调用 `POST /api/devices/{id}/tasks`；服务端 `remote.enqueue()` 再次校验允许动作与参数；桌面 `desktop_worker.execute()` 校验工作目录与本地启动权限。服务端/设备端双方白名单缺一不可。
+
+`run_tests` 只能在用户通过启动参数 `--allow-tests` 明确授权时运行固定 `unittest discover` 命令；Python 单元测试代码有本机用户权限，不是操作系统沙箱。
