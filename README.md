@@ -142,3 +142,8 @@ GitHub 仓库：https://github.com/pjc011227-glitch/agent-team 。
 电脑端 `agent-team-worker --workspace <可信工作目录>` 支持只读的 `search_text`：最多扫描 200 个常见小文本文件，最多返回 30 个命中，跳过隐藏目录、符号链接和大文件。`run_tests` 仅在本地添加 `--allow-tests` 时执行固定的 `python -m unittest discover -s tests -v`，90 秒截止。不支持自定义 Shell。**Python 测试代码本身可以访问系统，必须只对你信任的工作目录启用 --allow-tests**；环境变量中的设备令牌和常见密钥会被过滤，但这不是完整沙箱。
 
 仍未完成：AI 自主规划电脑任务、鼠标键盘/浏览器操作、原生桌面 APK/EXE、实时截图、可信设备上的完整安全隔离。除非经用户明确授权并完成更严格的权限审批，不应自动开放这些功能。
+
+
+## Android APK 预览版
+
+`android/` 提供原生 WebView 客户端，GitHub Actions 构建 `AgentTeam-Android-v0.1-debug.apk` 并发布到 GitHub Releases。手机安装后输入自己的 **HTTPS Hub** 地址，即可访问已有的智能体聊天和远程任务页面。**APK 不包含 Python 服务端，也不支持脱离 Hub 独立工作。** 请参阅 [Android 安装说明](android/README.md)。

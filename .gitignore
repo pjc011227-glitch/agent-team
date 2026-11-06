@@ -16,3 +16,9 @@ node_modules/
 .idea/
 .vscode/
 .DS_Store
+
+# Android build output
+android/.gradle/
+android/.idea/
+android/local.properties
+android/app/build/
